@@ -63,9 +63,12 @@ char *ean8_encode(const char *ean)
     return NULL; // se tiver algum erro na alocação de memoria
 }
 
-void create_image(const char *bits, const char *filename)
+void create_image(const char *bits, const char *filename, int espacamento,
+                  int pixels_por_area,
+                  int altura)
 {
-    int heigth = 58, width = 209; // tamanho de teste
+    // variaveis de tamanho e largura
+    int heigth = 2 * espacamento + altura, width = 2 * espacamento + pixels_por_area * strlen(bits);
 
     FILE *image = fopen(filename, "w"); // abre arquivo modo escrita
     // adiciona o cabeçalho
@@ -73,7 +76,7 @@ void create_image(const char *bits, const char *filename)
     fprintf(image, "%d %d\n", width, heigth);
 
     // Margem superior
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < espacamento; i++)
     {
         for (int k = 0; k < width; k++)
         {
@@ -83,32 +86,32 @@ void create_image(const char *bits, const char *filename)
     }
 
     // Code
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < altura; i++)
     {
         // Margem a esquerda
-        for (int k = 0; k < 4; k++)
+        for (int k = 0; k < espacamento; k++)
         {
             fprintf(image, "0");
         }
 
         // Code central
-        for (int k = 0; k < 67; k++)
+        for (int k = 0; k < strlen(bits); k++)
         {
-            for (int j = 0; j < 3; j++)
+            for (int j = 0; j < pixels_por_area; j++)
             {
                 fprintf(image, "%c", bits[k]);
             }
         }
 
         // Margem a direita
-        for (int k = 0; k < 4; k++)
+        for (int k = 0; k < espacamento; k++)
         {
             fprintf(image, "0");
         }
         fprintf(image, "\n");
     }
     // Margem inferior
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < espacamento; i++)
     {
         for (int k = 0; k < width; k++)
         {
@@ -119,7 +122,9 @@ void create_image(const char *bits, const char *filename)
     fclose(image);
 }
 
-void ean8_to_pbm(const char *bits, const char *filename)
+void ean8_to_pbm(const char *bits, const char *filename, int espacamento,
+                 int pixels_por_area,
+                 int altura)
 {
     FILE *image = fopen(filename, "r");
     if (image != NULL) // O arquivo existe
@@ -131,12 +136,12 @@ void ean8_to_pbm(const char *bits, const char *filename)
         scanf(" %c", &sub);
         if (sub == 's' || sub == 'S')
         {
-            create_image(bits, filename);
+            create_image(bits, filename, espacamento, pixels_por_area, altura);
             printf("Outro arquivo criado!\n");
         }
         else
             printf("Arquivo mantindo!\n");
     }
     else // Não existe
-        create_image(bits, filename);
+        create_image(bits, filename, espacamento, pixels_por_area, altura);
 }
