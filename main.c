@@ -6,7 +6,12 @@
 // Será usada se não for executado conforme esperado
 void usage()
 {
-    printf("Instruções do programa:\n");
+    printf("Uso: ./programa <EAN-8> [espacamento] [pixels_por_area] [altura] [arquivo]\n");
+    printf("  <EAN-8>              Código de 8 dígitos (obrigatório)\n");
+    printf("  espacamento          Margem em pixels (padrão: 4)\n");
+    printf("  pixels_por_area      Largura de cada barra (padrão: 3)\n");
+    printf("  altura               Altura do código (padrão: 50)\n");
+    printf("  arquivo              Nome do PBM de saída (padrão: saida.pbm)\n");
 }
 
 int main(int argc, char *argv[])
