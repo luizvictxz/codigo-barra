@@ -3,13 +3,10 @@
 #include <string.h>
 #include "ean8.h"
 
+// Será usada se não for executado conforme esperado
 void usage()
 {
     printf("Instruções do programa:\n");
-}
-
-void ean8_to_pbm(const char *bits, const char *filename)
-{
 }
 
 int main(int argc, char *argv[])
@@ -43,6 +40,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "Erro: Falha ao alocar memória para codificação.\n");
                 return 1;
             }
+            ean8_to_pbm(bits, "saida.pbm");
             free(bits);
         }
     }
