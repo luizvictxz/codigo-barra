@@ -6,19 +6,7 @@
 const char *L_CODE[10] = {"0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"};
 const char *R_CODE[10] = {"1110010", "1100110", "1101100", "1000010", "1011100", "1001110", "1010000", "1000100", "1001000", "1110100"};
 
-// Identifica qual número corresponde ao padrão de bits (Helper privado)
-static int match_pattern(char *pattern, int is_left)
-{
-    for (int i = 0; i < 10; i++)
-    {
-        const char *code = is_left ? L_CODE[i] : R_CODE[i];
-        if (strcmp(pattern, code) == 0)
-            return i;
-    }
-    return -1;
-}
-
-int ean8_calculate_checksum(const char *ean)
+static int ean8_calculate_checksum(const char *ean)
 {
     int calc = 0;
     for (int i = 0; i < 7; i++) // percorre os 7 primeiros números
@@ -72,9 +60,9 @@ char *ean8_encode(const char *ean)
     return NULL; // se tiver algum erro na alocação de memoria
 }
 
-void create_image(const char *bits, const char *filename, int espacamento,
-                  int pixels_por_area,
-                  int altura)
+static void create_image(const char *bits, const char *filename, int espacamento,
+                         int pixels_por_area,
+                         int altura)
 {
     // variaveis de tamanho e largura
     int heigth = 2 * espacamento + altura, width = 2 * espacamento + pixels_por_area * strlen(bits);
@@ -157,6 +145,18 @@ void ean8_to_pbm(const char *bits, const char *filename, int espacamento,
         create_image(bits, filename, espacamento, pixels_por_area, altura);
         printf("Arquivo criado!");
     }
+}
+
+// Identifica qual número corresponde ao padrão de bits
+static int match_pattern(char *pattern, int is_left)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        const char *code = is_left ? L_CODE[i] : R_CODE[i];
+        if (strcmp(pattern, code) == 0)
+            return i;
+    }
+    return -1;
 }
 
 // Nova Função de Extração
