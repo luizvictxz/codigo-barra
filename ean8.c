@@ -6,6 +6,18 @@
 const char *L_CODE[10] = {"0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"};
 const char *R_CODE[10] = {"1110010", "1100110", "1101100", "1000010", "1011100", "1001110", "1010000", "1000100", "1001000", "1110100"};
 
+// Identifica qual número corresponde ao padrão de bits (Helper privado)
+static int match_pattern(char *pattern, int is_left)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        const char *code = is_left ? L_CODE[i] : R_CODE[i];
+        if (strcmp(pattern, code) == 0)
+            return i;
+    }
+    return -1;
+}
+
 int ean8_calculate_checksum(const char *ean)
 {
     int calc = 0;
@@ -23,17 +35,14 @@ int ean8_calculate_checksum(const char *ean)
 
 int ean8_is_valid(const char *ean)
 {
-    if (strlen(ean) == 8) // verifica o tamanho
+    for (int i = 0; i < 8; i++)
     {
-        for (int i = 0; i < 8; i++)
-        {
-            if (!isdigit(ean[i])) // verifica se todos os caracteres são digitos
-                return -1;
-        }
-        int miss = ean8_calculate_checksum(ean);
-        if ((ean[7] - '0') == miss) // verifica se o digito bateu com o calculo
-            return 1;
+        if (!isdigit(ean[i])) // verifica se todos os caracteres são digitos
+            return -1;
     }
+    int miss = ean8_calculate_checksum(ean);
+    if ((ean[7] - '0') == miss) // verifica se o digito bateu com o calculo
+        return 1;
 
     return 0;
 }
@@ -142,6 +151,150 @@ void ean8_to_pbm(const char *bits, const char *filename, int espacamento,
         else
             printf("Arquivo mantindo!\n");
     }
-    else // Não existe
+    // Não existe
+    else
+    {
         create_image(bits, filename, espacamento, pixels_por_area, altura);
+        printf("Arquivo criado!");
+    }
+}
+
+// Nova Função de Extração
+int ean8_extract_id(const char *filename, char *buffer_out)
+{
+    FILE *image = fopen(filename, "r");
+    if (image == NULL)
+        return -1; // Erro arquivo inexistente
+
+    char format[3];
+    int width, height;
+
+    // Validação PBM
+    if (fscanf(image, "%2s", format) != 1 || strcmp(format, "P1") != 0)
+    {
+        fclose(image);
+        return -1;
+    }
+    if (fscanf(image, "%d %d", &width, &height) != 2)
+    {
+        fclose(image);
+        return -1;
+    }
+
+    // Alocação e Leitura da Imagem
+    int **img = (int **)malloc(height * sizeof(int *));
+    int load_error = 0;
+    for (int i = 0; i < height; i++)
+    {
+        img[i] = (int *)malloc(width * sizeof(int));
+        for (int j = 0; j < width; j++)
+        {
+            if (fscanf(image, "%1d", &img[i][j]) != 1)
+                load_error = 1;
+        }
+    }
+    fclose(image);
+
+    if (load_error)
+    {
+        // Libera memória e retorna erro
+        for (int i = 0; i < height; i++)
+            free(img[i]);
+        free(img);
+        return -1;
+    }
+
+    // Lógica de Scan
+    int linha = height / 2;
+    int col = 0;
+
+    // Pula Quiet Zone
+    while (col < width && img[linha][col] == 0)
+        col++;
+    if (col >= width)
+    { // Só branco
+        for (int i = 0; i < height; i++)
+            free(img[i]);
+        free(img);
+        return -2; // Código não encontrado
+    }
+
+    // Calcula Largura do Módulo
+    int inicio_cod = col;
+    int L = 0;
+    while (col < width && img[linha][col] == 1)
+    {
+        L++;
+        col++;
+    }
+    if (L == 0)
+    { // Erro estranho
+        for (int i = 0; i < height; i++)
+            free(img[i]);
+        free(img);
+        return -2;
+    }
+
+    int pos = inicio_cod + (3 * L); // Pula marcador inicial
+
+    // Decodifica
+    int erro_decode = 0;
+
+    // dígitos da esquerda
+    for (int i = 0; i < 4; i++)
+    {
+        char pat[8];
+        for (int b = 0; b < 7; b++)
+        {
+            int p_idx = pos + (b * L) + (L / 2);
+            if (p_idx >= width)
+            {
+                erro_decode = 1;
+                break;
+            }
+            pat[b] = img[linha][p_idx] ? '1' : '0';
+        }
+        pat[7] = '\0';
+        int val = match_pattern(pat, 1); // 1 = Left
+        if (val == -1)
+            erro_decode = 1;
+        else
+            buffer_out[i] = val + '0';
+
+        pos += 7 * L;
+    }
+
+    pos += 5 * L; // Pula centro
+
+    // 4 dígitos da direita
+    for (int i = 0; i < 4; i++)
+    {
+        char pat[8];
+        for (int b = 0; b < 7; b++)
+        {
+            int p_idx = pos + (b * L) + (L / 2);
+            if (p_idx >= width)
+            {
+                erro_decode = 1;
+                break;
+            }
+            pat[b] = img[linha][p_idx] ? '1' : '0';
+        }
+        pat[7] = '\0';
+        int val = match_pattern(pat, 0); // 0 = Right
+        if (val == -1)
+            erro_decode = 1;
+        else
+            buffer_out[i + 4] = val + '0';
+
+        pos += 7 * L;
+    }
+    buffer_out[8] = '\0'; // Null terminator
+
+    // Limpeza
+    for (int i = 0; i < height; i++)
+        free(img[i]);
+    free(img);
+
+    return erro_decode ? -2 : 0;
 }
