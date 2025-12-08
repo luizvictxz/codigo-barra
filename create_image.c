@@ -83,7 +83,32 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Erro: Falha ao alocar memória para codificação.\n");
         return 1;
     }
-    ean8_to_pbm(bits, arquivo, espaco, area, altura);
+
+    FILE *test_file = fopen(arquivo, "r");
+    int pode_gravar = 1;
+
+    if (test_file != NULL)
+    {
+        // O arquivo já existe! Vamos perguntar aqui no main.
+        fclose(test_file);
+        char resposta;
+        printf("O arquivo '%s' ja existe. Deseja sobrescrever? (s/n): ", arquivo);
+        scanf(" %c", &resposta);
+
+        if (resposta != 's' && resposta != 'S')
+        {
+            pode_gravar = 0;
+            printf("Operacao cancelada.\n");
+        }
+    }
+
+    if (pode_gravar)
+    {
+        // Chama a função única da biblioteca
+        ean8_to_pbm(bits, arquivo, espaco, area, altura);
+        printf("Arquivo gerado com sucesso: %s\n", arquivo);
+    }
+
     free(bits);
 
     return 0;
