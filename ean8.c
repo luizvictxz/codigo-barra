@@ -125,6 +125,44 @@ static int match_pattern(char *pattern, int is_left)
     return -1;
 }
 
+static void exact_digit(const int is_left, const int **img, int pos, int linha, int erro_decode, int width, int L, char *buffer_out)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        char pat[8];
+        for (int b = 0; b < 7; b++)
+        {
+            int p_idx = pos + (b * L) + (L / 2);
+            if (p_idx >= width)
+            {
+                erro_decode = 1;
+                break;
+            }
+            pat[b] = img[linha][p_idx] ? '1' : '0';
+        }
+        pat[7] = '\0';
+        int val = match_pattern(pat, 1); // 1 = Left
+        if (val == -1)
+            erro_decode = 1;
+        else
+        {
+            if (is_left)
+                buffer_out[i] = val + '0';
+            else
+                buffer_out[i + 4] = val + '0';
+        }
+
+        pos += 7 * L;
+    }
+}
+
+static void free_memory(int **img, const int number)
+{
+    for (int i = 0; i < number; i++)
+        free(img[i]);
+    free(img);
+}
+
 // Nova Função de Extração
 int ean8_extract_id(const char *filename, char *buffer_out)
 {
@@ -163,10 +201,7 @@ int ean8_extract_id(const char *filename, char *buffer_out)
 
     if (load_error)
     {
-        // Libera memória e retorna erro
-        for (int i = 0; i < height; i++)
-            free(img[i]);
-        free(img);
+        free_memory(img, height);
         return -1;
     }
 
@@ -179,9 +214,7 @@ int ean8_extract_id(const char *filename, char *buffer_out)
         col++;
     if (col >= width)
     { // Só branco
-        for (int i = 0; i < height; i++)
-            free(img[i]);
-        free(img);
+        free_memory(img, height);
         return -2; // Código não encontrado
     }
 
@@ -195,9 +228,7 @@ int ean8_extract_id(const char *filename, char *buffer_out)
     }
     if (L == 0)
     { // Erro estranho
-        for (int i = 0; i < height; i++)
-            free(img[i]);
-        free(img);
+        free_memory(img, height);
         return -2;
     }
 
@@ -207,60 +238,14 @@ int ean8_extract_id(const char *filename, char *buffer_out)
     int erro_decode = 0;
 
     // dígitos da esquerda
-    for (int i = 0; i < 4; i++)
-    {
-        char pat[8];
-        for (int b = 0; b < 7; b++)
-        {
-            int p_idx = pos + (b * L) + (L / 2);
-            if (p_idx >= width)
-            {
-                erro_decode = 1;
-                break;
-            }
-            pat[b] = img[linha][p_idx] ? '1' : '0';
-        }
-        pat[7] = '\0';
-        int val = match_pattern(pat, 1); // 1 = Left
-        if (val == -1)
-            erro_decode = 1;
-        else
-            buffer_out[i] = val + '0';
-
-        pos += 7 * L;
-    }
-
+    exact_digit(1, img, pos, linha, erro_decode, width, L, buffer_out);
     pos += 5 * L; // Pula centro
 
-    // 4 dígitos da direita
-    for (int i = 0; i < 4; i++)
-    {
-        char pat[8];
-        for (int b = 0; b < 7; b++)
-        {
-            int p_idx = pos + (b * L) + (L / 2);
-            if (p_idx >= width)
-            {
-                erro_decode = 1;
-                break;
-            }
-            pat[b] = img[linha][p_idx] ? '1' : '0';
-        }
-        pat[7] = '\0';
-        int val = match_pattern(pat, 0); // 0 = Right
-        if (val == -1)
-            erro_decode = 1;
-        else
-            buffer_out[i + 4] = val + '0';
-
-        pos += 7 * L;
-    }
+    // digitros direita
+    exact_digit(0, img, pos, linha, erro_decode, width, L, buffer_out);
     buffer_out[8] = '\0'; // Null terminator
 
     // Limpeza
-    for (int i = 0; i < height; i++)
-        free(img[i]);
-    free(img);
-
+    free_memory(img, height);
     return erro_decode ? -2 : 0;
 }
