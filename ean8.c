@@ -60,6 +60,16 @@ char *ean8_encode(const char *ean)
     return NULL; // se tiver algum erro na alocação de memoria
 }
 
+static void margin(FILE *image, const int espacamento, const int width)
+{
+    for (int i = 0; i < espacamento; i++)
+    {
+        for (int k = 0; k < width; k++)
+            fprintf(image, "0");
+        fprintf(image, "\n");
+    }
+}
+
 void ean8_to_pbm(const char *bits, const char *filename, int espacamento, int pixels_por_area, int altura)
 {
     int heigth = 2 * espacamento + altura;
@@ -73,13 +83,7 @@ void ean8_to_pbm(const char *bits, const char *filename, int espacamento, int pi
     fprintf(image, "%d %d\n", width, heigth);
 
     // Margem superior
-    for (int i = 0; i < espacamento; i++)
-    {
-        for (int k = 0; k < width; k++)
-            fprintf(image, "0");
-        fprintf(image, "\n");
-    }
-
+    margin(image, espacamento, width);
     // Código de Barras
     for (int i = 0; i < altura; i++)
     {
@@ -103,13 +107,7 @@ void ean8_to_pbm(const char *bits, const char *filename, int espacamento, int pi
     }
 
     // Margem inferior
-    for (int i = 0; i < espacamento; i++)
-    {
-        for (int k = 0; k < width; k++)
-            fprintf(image, "0");
-        fprintf(image, "\n");
-    }
-
+    margin(image, espacamento, width);
     fclose(image);
 }
 
